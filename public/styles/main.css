@@ -1,0 +1,22 @@
+body {
+    background-color: #3D3B40;
+}
+.signin {
+    width: 50%;
+    height: 70%;
+}
+.form-signin {
+    width: 50%;
+    height: 70%;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.layer1 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
