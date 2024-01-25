@@ -1,13 +1,22 @@
 body {
     background-color: #3D3B40;
+    height: 100vh;
 }
 .signin {
     width: 50%;
-    height: 70%;
+    height: 80%;
+}
+.connected {
+    display: grid;
+    height: 100vh;
+}
+.overlap {
+    grid-column: 1;
+    grid-row: 1;
 }
 .form-signin {
-    width: 50%;
-    height: 70%;
+    width: 30%;
+    height: 50%;
     padding: 1rem;
     display: flex;
     flex-direction: column;
@@ -19,4 +28,24 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
+}
+.company_image {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 50%
+
+}
+.company_image img {
+    max-width: fit-content;
+}
+.maxheight {
+    height: 100%;
+}
+
+.center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }

@@ -1,3 +1,45 @@
 <%- include("partials/header.ejs") %>
-<p> henry</p>
+<div class="connected">
+    <div class="overlap">
+        <h1 class="text-white mx-2">
+    HIGH SCORE: <%= current_user.highscore %>
+    </h1>
+    <h2 class="text-secodnary mx-2">
+        CURRENT_SCORE: <%= score %>
+    </h2>
+    </div>
+    <div class="overlap d-flex justify-content-end my-2 mx-2">
+        <form action="/logout">
+            <button class="btn btn-danger py-2" type="submit">Logout</button>
+        </form>
+    </div>
+    
+    
+    
+    <div class="container maxheight center overlap">
+        <div class="p-5 text-center bg-body-tertiary rounded-3 w-100 h-50">
+        <div class="company_image center mb-5">
+            <% if(selectedCompany != undefined) { %>
+                <img src="<%=selectedCompany.image %>" height="100" alt="">
+            </div>
+            <p class="col-lg-8 mx-auto fs-5 text-muted">
+            What is this company?
+            </p>
+            <div class="d-inline-flex gap-2 mb-5">
+            <div class="form-floating mb-4">
+                <form action="/play" method="POST">
+                    <input type="text" class="form-control" id="floatingInput" placeholder="i.e Microsoft" name="company_guess">
+                </form>
+                
+            </div>
+            </div>
+            <%} else {%>
+                <h1>SLOW YOUR HORSES! YOU'RE TOO HOT!</h1>
+            </div>
+            <h2>REFRESH THE PAGE!</h2>
+                <% } %>
+        </div>
+    </div>
+</div>
+
 <%- include("partials/footer.ejs") %>

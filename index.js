@@ -27,16 +27,31 @@ const db = new pg.Client({
 
 db.connect();
 
+//variables to keep track of data
+var current_company = {};
 var current_user = {};
 var current_error = "";
+var current_score = 0;
+
 
 let allCompanies = await axios.get("http://588fc30f7458d612002df0d2.mockapi.io/api/v1/companies");
 allCompanies = allCompanies.data;
 console.log(allCompanies.length);
 
 async function getCompany (name) {
-
+    try {
+        const nameSplit = name.split(" "); //just in case the company name is wrong
+        var company = await axios.get("https://api.api-ninjas.com/v1/logo?name=" + (name || nameSplit[0]), {
+        headers:{
+            'X-Api-Key': process.env.API_KEY,
+        }})
+       current_company = company.data[0];
+       console.log(current_company);
+    } catch (error) {
+        console.log(error);
+    }
 }
+
 
 async function authenticate (name, password){
     try {
@@ -57,6 +72,15 @@ async function authenticate (name, password){
         console.log(error);
     }
 }
+
+async function addPoint(id, score){
+    try {
+        console.log(id); // not working because value is null
+        await db.query("UPDATE users SET highscore = $1 WHERE id= $2", [score, id]);
+    } catch (error) {
+        console.log("error");
+    }
+}
 app.get("/", (req, res) => { //sends user to login page
     if(current_error!="") {
         res.render("login.ejs", {error: current_error});
@@ -70,25 +94,48 @@ app.post("/play", async (req, res) => { //user authenticated = play, not = backl
     const name = req.body.name;
     const password = req.body.password;
     
-    const auth = await authenticate(name, password);
+    const auth = await authenticate(name || current_user.name, password || current_user.password);
 
     if(typeof auth === typeof String()) {
         current_error = auth;
         res.redirect("/"); //User does not exist
     }
     else if(auth) { // authenticated
-        console.log(auth);
-        const randomNumber = Math.trunc(100 * Math.random() + 1);
-        var selectedCompany = allCompanies[randomNumber];
-        res.render("play.ejs", {selectedCompany: selectedCompany, current_user: current_user});
+        if(req.body.company_guess){
+            if(req.body.company_guess.toLowerCase() == current_company.name.toLowerCase() || current_company.name.split(" ")[0].toLowerCase() == req.body.company_guess.toLowerCase()) {
+                current_score+=1;
+            }
+            else {
+                if(current_score > parseInt(current_user.highscore)){
+                    await addPoint(current_user.id, current_score);
+                    await authenticate(current_user.name, current_user.password);
+                }
+                current_score = 0;
+            }
+        }
+        var randomNumber = Math.trunc(100 * Math.random());
+        await getCompany(allCompanies[randomNumber].name);
+        while(current_company==undefined){
+            randomNumber = Math.trunc(100 * Math.random());
+            await getCompany(allCompanies[randomNumber].name);
+        }
+        res.render("play.ejs", {selectedCompany: current_company, current_user: current_user, score: current_score}); //current_company has {name, ticker, image}, current_user has {id, name, score}
     }
     else { //wrong password
-        current_error = "Wrong pasword, try again" 
+        current_error = "Wrong pasword, try again" ;
         res.redirect("/");
     }
 
     
 });
+
+app.get("/logout", async (req, res) => {
+    var current_company = {};
+    var current_user = {};
+    var current_error = "";
+    var current_score = 0;
+    res.redirect("/");
+})
 
 
 app.listen(port, () => {
