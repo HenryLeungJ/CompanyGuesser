@@ -52,6 +52,16 @@ async function getCompany (name) {
     }
 }
 
+async function createUser (name, password) {
+    try {
+        const newUser = await db.query("INSERT INTO users (name, password) VALUES ($1, $2) RETURNING *", [name, password]);
+        console.log(newUser.rows[0]);
+        current_user = newUser.rows[0];
+    } catch (error) {
+        console.log(error);
+        return false;
+    }
+}
 
 async function authenticate (name, password){
     try {
@@ -81,7 +91,12 @@ async function addPoint(id, score){
         console.log("error");
     }
 }
+
 app.get("/", (req, res) => { //sends user to login page
+    current_score = 0;
+    current_company = {};
+    current_user = {};
+    
     if(current_error!="") {
         res.render("login.ejs", {error: current_error});
         current_error = "";
@@ -90,6 +105,24 @@ app.get("/", (req, res) => { //sends user to login page
         res.render("login.ejs");
     }
 });
+
+app.get("/signup", (req, res) => {
+    res.render("signup.ejs"); //redirects to signup page which redirects to /play
+});
+app.post("/signup", async (req, res) => {
+    const name = req.body.name;
+    const password = req.body.password;
+    var made = await createUser(name, password);
+
+    if(made==false){
+        res.render("signup.ejs", {error: "Username taken, try again"});
+    }
+    else{
+        res.render("login.ejs", {error: "Account created!"});
+    }
+    
+});
+
 app.post("/play", async (req, res) => { //user authenticated = play, not = backl to login
     const name = req.body.name;
     const password = req.body.password;

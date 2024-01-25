@@ -17,15 +17,15 @@
     
     
     <div class="container maxheight center overlap">
-        <div class="p-5 text-center bg-body-tertiary rounded-3 w-100 h-50">
-        <div class="company_image center mb-5">
-            <% if(selectedCompany != undefined) { %>
-                <img src="<%=selectedCompany.image %>" height="100" alt="">
+        <div class="p-5 text-center center2 bg-body-tertiary rounded-3 w-100">
+            <div class="company_image center mb-5">
+                <% if(selectedCompany != undefined) { %>
+                    <img src="<%=selectedCompany.image %>" height="100" alt="">
             </div>
             <p class="col-lg-8 mx-auto fs-5 text-muted">
             What is this company?
             </p>
-            <div class="d-inline-flex gap-2 mb-5">
+            <div class="d-inline-flex gap-2">
             <div class="form-floating mb-4">
                 <form action="/play" method="POST">
                     <input type="text" class="form-control" id="floatingInput" placeholder="i.e Microsoft" name="company_guess">
