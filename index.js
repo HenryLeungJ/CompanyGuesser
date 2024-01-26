@@ -92,6 +92,17 @@ async function addPoint(id, score){
     }
 }
 
+async function getLeaderboard() {
+    try {
+        const leaderboard = await db.query("SELECT name, highscore FROM users ORDER BY highscore DESC LIMIT 10");
+        console.log(leaderboard.rows);
+        return leaderboard.rows;
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+
 app.get("/", (req, res) => { //sends user to login page
     current_score = 0;
     current_company = {};
@@ -169,6 +180,11 @@ app.get("/logout", async (req, res) => {
     var current_score = 0;
     res.redirect("/");
 })
+
+app.get("/leaderboard", async (req, res) => {
+    var leaderboard = await getLeaderboard();
+    res.render("leaderboard.ejs", {leaderboard: leaderboard});
+});
 
 
 app.listen(port, () => {
