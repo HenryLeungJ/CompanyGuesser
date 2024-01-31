@@ -1,12 +1,12 @@
 <%- include("partials/header.ejs") %>
 <div class="layer1 ">
     <main class="form-signin rounded bg-light">
-        <form action="/signup" method="POST" class = "signin">
+        <form action="/signup" method="POST" class = "signin mb-1">
             <h1 class="h3 mb-3 fw-normal">Create Account</h1>
         
             <div class="form-floating mb-2">
                 <input type="text" class="form-control" id="floatingInput" placeholder="Sam Sulendor" name="name">
-                <label for="floatingInput">username</label>
+                <label for="floatingInput">Username</label>
             </div>
             <div class="form-floating mb-3">
                 <input type="password" class="form-control" id="floatingPassword" placeholder="Password" name="password">
@@ -15,6 +15,7 @@
         
             <button class="btn btn-primary w-100" type="submit">Sign up</button>
         </form>
+        <a href="/">Sign In</a>
     
         
         <% if(locals.error) { %> 

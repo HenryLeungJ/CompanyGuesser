@@ -55,6 +55,17 @@ async function getCompany (name) {
     }
 }
 
+async function createUser (name, password) {
+    try {
+        const newUser = await db.query("INSERT INTO users (name, password) VALUES ($1, $2) RETURNING *", [name, password]);
+        console.log(newUser.rows[0]);
+        current_user = newUser.rows[0];
+    } catch (error) {
+        console.log(error);
+        return false;
+    }
+}
+
 
 
 async function authenticate (name, password){
@@ -88,8 +99,7 @@ async function addPoint(id, score){
 
 async function getLeaderboard() {
     try {
-        const leaderboard = await db.query("SELECT name, highscore FROM users ORDER BY highscore DESC LIMIT 10");
-        console.log(leaderboard.rows);
+        const leaderboard = await db.query("SELECT name, highscore FROM users ORDER BY highscore DESC LIMIT 6");
         return leaderboard.rows;
     } catch (error) {
         console.log(error);
@@ -110,6 +120,23 @@ app.get("/", (req, res) => { //sends user to login page
         res.render("login.ejs");
     }
 });
+app.post("/login", async (req, res) => {
+    const name = req.body.name;
+    const password = req.body.password;
+    const auth = await authenticate(name || current_user.name, password || current_user.password);
+
+    if(typeof auth === typeof String()) {
+        current_error = auth;
+        res.redirect("/"); //User does not exist
+    }
+    else if(auth){
+        res.redirect("/play");
+    }
+    else { //wrong password
+        current_error = "Wrong pasword, try again" ;
+        res.redirect("/");
+    }
+});
 
 app.get("/signup", (req, res) => {
     res.render("signup.ejs"); //redirects to signup page which redirects to /play
@@ -128,29 +155,8 @@ app.post("/signup", async (req, res) => {
     
 });
 
-app.post("/play", async (req, res) => { //user authenticated = play, not = backl to login
-    const name = req.body.name;
-    const password = req.body.password;
-    
-    const auth = await authenticate(name || current_user.name, password || current_user.password);
-
-    if(typeof auth === typeof String()) {
-        current_error = auth;
-        res.redirect("/"); //User does not exist
-    }
-    else if(auth) { // authenticated
-        if(req.body.company_guess){
-            if(req.body.company_guess.toLowerCase() == current_company.name.toLowerCase() || current_company.name.split(" ")[0].toLowerCase() == req.body.company_guess.toLowerCase()) {
-                current_score+=1;
-            }
-            else {
-                if(current_score > parseInt(current_user.highscore)){
-                    await addPoint(current_user.id, current_score);
-                    await authenticate(current_user.name, current_user.password);
-                }
-                current_score = 0;
-            }
-        }
+app.get("/play", async (req, res) => { //user authenticated = play, not = backl to login
+    if(current_user.name){
         var randomNumber = Math.trunc(100 * Math.random());
         await getCompany(allCompanies[randomNumber].name);
         while(current_company==undefined){
@@ -159,12 +165,29 @@ app.post("/play", async (req, res) => { //user authenticated = play, not = backl
         }
         res.render("play.ejs", {selectedCompany: current_company, current_user: current_user, score: current_score}); //current_company has {name, ticker, image}, current_user has {id, name, score}
     }
-    else { //wrong password
-        current_error = "Wrong pasword, try again" ;
+    else {
         res.redirect("/");
     }
 
     
+
+    
+});
+
+app.post("/play", async (req, res) => {
+    if(req.body.company_guess){
+        if(req.body.company_guess.toLowerCase() == current_company.name.toLowerCase() || current_company.name.split(" ")[0].toLowerCase() == req.body.company_guess.toLowerCase()) {
+            current_score+=1;
+        }
+        else {
+            if(current_score > parseInt(current_user.highscore)){
+                await addPoint(current_user.id, current_score);
+                await authenticate(current_user.name, current_user.password);
+            }
+            current_score = 0;
+        }
+    }
+    res.redirect("/play");
 });
 
 app.get("/logout", async (req, res) => {
