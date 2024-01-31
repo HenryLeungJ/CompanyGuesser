@@ -58,24 +58,6 @@ async function getCompany (name) {
 
 
 
-async function authenticate (name, password){
-    var trueName = await db.query("SELECT * FROM users WHERE name=$1", [name]);
-    if(trueName.rows[0]) {
-        await bcrypt.compare(password, trueName.rows[0].password, (err, result) => {
-            console.log(result);
-            if (result) {
-                current_user = trueName.rows[0];
-                return true; //login successful
-            }
-            else {
-                return false; //wrong password
-            }
-        })
-    }
-    else {
-        return "User does not exist" //username was not found
-    }
-}
 
 async function addPoint(id, score){
     try {
