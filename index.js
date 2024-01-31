@@ -55,36 +55,25 @@ async function getCompany (name) {
     }
 }
 
-async function createUser (name, password) {
-    try {
-        const newUser = await db.query("INSERT INTO users (name, password) VALUES ($1, $2) RETURNING *", [name, password]);
-        console.log(newUser.rows[0]);
-        current_user = newUser.rows[0];
-    } catch (error) {
-        console.log(error);
-        return false;
-    }
-}
 
 
 
 async function authenticate (name, password){
-    try {
-        var trueName = await db.query("SELECT * FROM users WHERE name=$1", [name]);
-        if(trueName.rows[0]) {
-            if(trueName.rows[0].password == password) {
+    var trueName = await db.query("SELECT * FROM users WHERE name=$1", [name]);
+    if(trueName.rows[0]) {
+        await bcrypt.compare(password, trueName.rows[0].password, (err, result) => {
+            console.log(result);
+            if (result) {
                 current_user = trueName.rows[0];
                 return true; //login successful
             }
             else {
                 return false; //wrong password
             }
-        }
-        else {
-            return "User does not exist" //username was not found
-        }
-    } catch (error) {
-        console.log(error);
+        })
+    }
+    else {
+        return "User does not exist" //username was not found
     }
 }
 
@@ -99,7 +88,7 @@ async function addPoint(id, score){
 
 async function getLeaderboard() {
     try {
-        const leaderboard = await db.query("SELECT name, highscore FROM users ORDER BY highscore DESC LIMIT 6");
+        const leaderboard = await db.query("SELECT name, highscore FROM users ORDER BY highscore DESC LIMIT 5");
         return leaderboard.rows;
     } catch (error) {
         console.log(error);
@@ -123,18 +112,23 @@ app.get("/", (req, res) => { //sends user to login page
 app.post("/login", async (req, res) => {
     const name = req.body.name;
     const password = req.body.password;
-    const auth = await authenticate(name || current_user.name, password || current_user.password);
-
-    if(typeof auth === typeof String()) {
-        current_error = auth;
+    var trueName = await db.query("SELECT * FROM users WHERE name=$1", [name]);
+    if(trueName.rows[0]) {
+        await bcrypt.compare(password, trueName.rows[0].password, (err, result) => {
+            console.log(result);
+            if (result) {
+                current_user = trueName.rows[0];
+                res.redirect("/play");
+            }
+            else {
+                current_error = "Wrong pasword, try again" ;
+                res.redirect("/");
+            }
+        })
+    }
+    else {
+        current_error = "User does not exist";
         res.redirect("/"); //User does not exist
-    }
-    else if(auth){
-        res.redirect("/play");
-    }
-    else { //wrong password
-        current_error = "Wrong pasword, try again" ;
-        res.redirect("/");
     }
 });
 
@@ -144,15 +138,23 @@ app.get("/signup", (req, res) => {
 app.post("/signup", async (req, res) => {
     const name = req.body.name;
     const password = req.body.password;
-    var made = await createUser(name, password);
-
-    if(made==false){
-        res.render("signup.ejs", {error: "Username taken, try again"});
-    }
-    else{
-        res.render("login.ejs", {error: "Account created!"});
-    }
-    
+    await bcrypt.hash(password, saltRounds, async (err, result) => { //hashed password
+        if (err) {
+            console.log(err);
+        }
+        else {
+            try {
+                console.log(name, result);
+                const newUser = await db.query("INSERT INTO users (name, password) VALUES ($1, $2) RETURNING *", [name, result]);
+                current_user = newUser.rows[0];
+                current_user.password = password;
+                res.redirect("/play");
+            } catch (error) {
+                console.log(error);
+                res.render("signup.ejs", {error: "Username taken, try again"});
+            }
+        }
+    })
 });
 
 app.get("/play", async (req, res) => { //user authenticated = play, not = backl to login
@@ -163,6 +165,7 @@ app.get("/play", async (req, res) => { //user authenticated = play, not = backl 
             randomNumber = Math.trunc(100 * Math.random());
             await getCompany(allCompanies[randomNumber].name);
         }
+        console.log(current_user);
         res.render("play.ejs", {selectedCompany: current_company, current_user: current_user, score: current_score}); //current_company has {name, ticker, image}, current_user has {id, name, score}
     }
     else {

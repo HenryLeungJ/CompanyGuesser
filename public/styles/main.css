@@ -5,6 +5,7 @@ body {
 .signin {
     width: 70%;
 }
+
 .connected {
     display: grid;
     height: 100vh;
@@ -12,7 +13,9 @@ body {
 .overlap {
     grid-column: 1;
     grid-row: 1;
+    max-height: 100vh;
 }
+
 .center2 {
     display: flex;
     flex-direction: column;
@@ -46,9 +49,6 @@ body {
 }
 .company_image img {
     max-width: fit-content;
-}
-.maxheight {
-    height: 100%;
 }
 
 .center {
