@@ -13,6 +13,7 @@ dotenv.config();
 const app = express();
 const port = 3000;
 const saltRounds = 10;
+var login = false; //del
 
 //middlewear 
 app.use(bodyParser.urlencoded({extended: true}));
@@ -61,14 +62,17 @@ async function authenticate (name, password){
     try {
         var reso = false;
         var trueName = await db.query("SELECT * FROM users WHERE name=$1", [name]);
+        console.log(password, name);
         if(trueName.rows[0]) {
-            const result = bcrypt.compare(password, trueName.rows[0].password, async (err, result) => {
+            const result = bcrypt.compare(password, trueName.rows[0].password, (err, result) => {
                             if (err) {
                                 console.log(err);
                             } else {
                                 if(result) {
                                     current_user = trueName.rows[0];
+                                    current_user.password = password;
                                     reso = true; //login successful
+                                    console.log(password);
                                 }
                                 else {
                                     reso = false; //wrong password
@@ -87,7 +91,7 @@ async function authenticate (name, password){
 
 async function addPoint(id, score){
     try {
-        console.log(id); // not working because value is null
+        console.log(id, "brudda"); // not working because value is null
         await db.query("UPDATE users SET highscore = $1 WHERE id= $2", [score, id]);
     } catch (error) {
         console.log("error");
@@ -96,8 +100,7 @@ async function addPoint(id, score){
 
 async function getLeaderboard() {
     try {
-        const leaderboard = await db.query("SELECT name, highscore FROM users ORDER BY highscore DESC LIMIT 10");
-        console.log(leaderboard.rows);
+        const leaderboard = await db.query("SELECT name, highscore FROM users ORDER BY highscore DESC LIMIT 6");
         return leaderboard.rows;
     } catch (error) {
         console.log(error);
@@ -154,7 +157,8 @@ app.post("/play", async (req, res) => { //user authenticated = play, not = backl
                             if (err) {
                                 console.log(err);
                             } else {
-                                if(result) {
+                                if(result || login) {
+                                    login = true; // false
                                     current_user = trueName.rows[0];
                                     if(req.body.company_guess){
                                         if(req.body.company_guess.toLowerCase() == current_company.name.toLowerCase() || current_company.name.split(" ")[0].toLowerCase() == req.body.company_guess.toLowerCase()) {
@@ -163,7 +167,8 @@ app.post("/play", async (req, res) => { //user authenticated = play, not = backl
                                         else {
                                             if(current_score > parseInt(current_user.highscore)){
                                                 await addPoint(current_user.id, current_score);
-                                                await authenticate(current_user.name, current_user.password);
+                                                await authenticate(current_user.name, password);
+                                                console.log("now");
                                             }
                                             current_score = 0;
                                         }
