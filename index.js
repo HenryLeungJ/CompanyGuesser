@@ -58,36 +58,7 @@ async function getCompany (name) {
 
 
 
-async function authenticate (name, password){
-    try {
-        var reso = false;
-        var trueName = await db.query("SELECT * FROM users WHERE name=$1", [name]);
-        console.log(password, name);
-        if(trueName.rows[0]) {
-            const result = bcrypt.compare(password, trueName.rows[0].password, (err, result) => {
-                            if (err) {
-                                console.log(err);
-                            } else {
-                                if(result) {
-                                    current_user = trueName.rows[0];
-                                    current_user.password = password;
-                                    reso = true; //login successful
-                                    console.log(password);
-                                }
-                                else {
-                                    reso = false; //wrong password
-                                }
-                            }
-                        });
-            return reso;
-        }
-        else {
-            return "User does not exist" //username was not found
-        }
-    } catch (error) {
-        console.log(error);
-    }
-}
+
 
 async function addPoint(id, score){
     try {
@@ -100,7 +71,7 @@ async function addPoint(id, score){
 
 async function getLeaderboard() {
     try {
-        const leaderboard = await db.query("SELECT name, highscore FROM users ORDER BY highscore DESC LIMIT 6");
+        const leaderboard = await db.query("SELECT name, highscore FROM users ORDER BY highscore DESC LIMIT 5");
         return leaderboard.rows;
     } catch (error) {
         console.log(error);
@@ -121,6 +92,28 @@ app.get("/", (req, res) => { //sends user to login page
         res.render("login.ejs");
     }
 });
+app.post("/login", async (req, res) => {
+    const name = req.body.name;
+    const password = req.body.password;
+    var trueName = await db.query("SELECT * FROM users WHERE name=$1", [name]);
+    if(trueName.rows[0]) {
+        await bcrypt.compare(password, trueName.rows[0].password, (err, result) => {
+            console.log(result);
+            if (result) {
+                current_user = trueName.rows[0];
+                res.redirect("/play");
+            }
+            else {
+                current_error = "Wrong pasword, try again" ;
+                res.redirect("/");
+            }
+        })
+    }
+    else {
+        current_error = "User does not exist";
+        res.redirect("/"); //User does not exist
+    }
+});
 
 app.get("/signup", (req, res) => {
     res.render("signup.ejs"); //redirects to signup page which redirects to /play
@@ -128,75 +121,59 @@ app.get("/signup", (req, res) => {
 app.post("/signup", async (req, res) => {
     const name = req.body.name;
     const password = req.body.password;
-    const result = await bcrypt.hash(password, saltRounds, async (err, result) => {
+    await bcrypt.hash(password, saltRounds, async (err, result) => { //hashed password
         if (err) {
             console.log(err);
-        } else {
+        }
+        else {
             try {
+                console.log(name, result);
                 const newUser = await db.query("INSERT INTO users (name, password) VALUES ($1, $2) RETURNING *", [name, result]);
-                console.log(newUser.rows[0]);
                 current_user = newUser.rows[0];
-                res.render("login.ejs", {error: "Account created!"});
+                current_user.password = password;
+                res.redirect("/play");
             } catch (error) {
                 console.log(error);
                 res.render("signup.ejs", {error: "Username taken, try again"});
             }
         }
-    });
-    
+    })
 });
 
-app.post("/play", async (req, res) => { //user authenticated = play, not = backl to login
-    const name = req.body.name || current_user.name;
-    const password = req.body.password || current_user.password;
-
-    try {
-        var trueName = await db.query("SELECT * FROM users WHERE name=$1", [name]);
-        if(trueName.rows[0]) {
-            bcrypt.compare(password, trueName.rows[0].password, async (err, result) => {
-                            if (err) {
-                                console.log(err);
-                            } else {
-                                if(result || login) {
-                                    login = true; // false
-                                    current_user = trueName.rows[0];
-                                    if(req.body.company_guess){
-                                        if(req.body.company_guess.toLowerCase() == current_company.name.toLowerCase() || current_company.name.split(" ")[0].toLowerCase() == req.body.company_guess.toLowerCase()) {
-                                            current_score+=1;
-                                        }
-                                        else {
-                                            if(current_score > parseInt(current_user.highscore)){
-                                                await addPoint(current_user.id, current_score);
-                                                await authenticate(current_user.name, password);
-                                                console.log("now");
-                                            }
-                                            current_score = 0;
-                                        }
-                                    }
-                                    var randomNumber = Math.trunc(100 * Math.random());
-                                    await getCompany(allCompanies[randomNumber].name);
-                                    while(current_company==undefined){
-                                        randomNumber = Math.trunc(100 * Math.random());
-                                        await getCompany(allCompanies[randomNumber].name);
-                                    }
-                                    res.render("play.ejs", {selectedCompany: current_company, current_user: current_user, score: current_score}); //current_company has {name, ticker, image}, current_user has {id, name, score}
-                                }
-                                else {
-                                    current_error = "Wrong pasword, try again" ;
-                                    res.redirect("/");
-                                }
-                            }
-                        });
+app.get("/play", async (req, res) => { //user authenticated = play, not = backl to login
+    if(current_user.name){
+        var randomNumber = Math.trunc(100 * Math.random());
+        await getCompany(allCompanies[randomNumber].name);
+        while(current_company==undefined){
+            randomNumber = Math.trunc(100 * Math.random());
+            await getCompany(allCompanies[randomNumber].name);
         }
-        else {
-            current_error = "User not found, try again"; //username was not found
-            res.redirect("/"); //User does not exist
-        }
-    } catch (error) {
-        console.log(error);
+        console.log(current_user);
+        res.render("play.ejs", {selectedCompany: current_company, current_user: current_user, score: current_score}); //current_company has {name, ticker, image}, current_user has {id, name, score}
+    }
+    else {
+        res.redirect("/");
     }
 
     
+
+    
+});
+
+app.post("/play", async (req, res) => {
+    if(req.body.company_guess){
+        if(req.body.company_guess.toLowerCase() == current_company.name.toLowerCase() || current_company.name.split(" ")[0].toLowerCase() == req.body.company_guess.toLowerCase()) {
+            current_score+=1;
+        }
+        else {
+            if(current_score > parseInt(current_user.highscore)){
+                await addPoint(current_user.id, current_score);
+                await authenticate(current_user.name, current_user.password);
+            }
+            current_score = 0;
+        }
+    }
+    res.redirect("/play");
 });
 
 app.get("/logout", async (req, res) => {
