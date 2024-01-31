@@ -2,6 +2,23 @@ body {
     background-color: lightslategray;
     height: 100vh;
 }
+.list-group {
+    width: 100%;
+    max-width: 460px;
+    margin-inline: 1.5rem;
+}
+.list-group-item-check {
+    position: absolute;
+    clip: rect(0, 0, 0, 0);
+}
+.list-group-item-check:checked + .list-group-item {
+    color: #fff;
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+.list-group-checkable .list-group-item {
+    cursor: pointer;
+}
 .signin {
     width: 70%;
 }

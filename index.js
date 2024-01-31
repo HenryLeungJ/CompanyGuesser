@@ -13,6 +13,7 @@ dotenv.config();
 const app = express();
 const port = 3000;
 const saltRounds = 10;
+var login = false; //del
 
 //middlewear 
 app.use(bodyParser.urlencoded({extended: true}));
@@ -61,7 +62,7 @@ async function getCompany (name) {
 
 async function addPoint(id, score){
     try {
-        console.log(id); // not working because value is null
+        console.log(id, "brudda"); // not working because value is null
         await db.query("UPDATE users SET highscore = $1 WHERE id= $2", [score, id]);
     } catch (error) {
         console.log("error");
