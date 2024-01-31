@@ -59,23 +59,15 @@ async function getCompany (name) {
 
 async function authenticate (name, password){
     try {
-        var reso = false;
         var trueName = await db.query("SELECT * FROM users WHERE name=$1", [name]);
         if(trueName.rows[0]) {
-            const result = bcrypt.compare(password, trueName.rows[0].password, async (err, result) => {
-                            if (err) {
-                                console.log(err);
-                            } else {
-                                if(result) {
-                                    current_user = trueName.rows[0];
-                                    reso = true; //login successful
-                                }
-                                else {
-                                    reso = false; //wrong password
-                                }
-                            }
-                        });
-            return reso;
+            if(trueName.rows[0].password == password) {
+                current_user = trueName.rows[0];
+                return true; //login successful
+            }
+            else {
+                return false; //wrong password
+            }
         }
         else {
             return "User does not exist" //username was not found
@@ -125,70 +117,51 @@ app.get("/signup", (req, res) => {
 app.post("/signup", async (req, res) => {
     const name = req.body.name;
     const password = req.body.password;
-    const result = await bcrypt.hash(password, saltRounds, async (err, result) => {
-        if (err) {
-            console.log(err);
-        } else {
-            try {
-                const newUser = await db.query("INSERT INTO users (name, password) VALUES ($1, $2) RETURNING *", [name, result]);
-                console.log(newUser.rows[0]);
-                current_user = newUser.rows[0];
-                res.render("login.ejs", {error: "Account created!"});
-            } catch (error) {
-                console.log(error);
-                res.render("signup.ejs", {error: "Username taken, try again"});
-            }
-        }
-    });
+    var made = await createUser(name, password);
+
+    if(made==false){
+        res.render("signup.ejs", {error: "Username taken, try again"});
+    }
+    else{
+        res.render("login.ejs", {error: "Account created!"});
+    }
     
 });
 
 app.post("/play", async (req, res) => { //user authenticated = play, not = backl to login
-    const name = req.body.name || current_user.name;
-    const password = req.body.password || current_user.password;
+    const name = req.body.name;
+    const password = req.body.password;
+    
+    const auth = await authenticate(name || current_user.name, password || current_user.password);
 
-    try {
-        var trueName = await db.query("SELECT * FROM users WHERE name=$1", [name]);
-        if(trueName.rows[0]) {
-            bcrypt.compare(password, trueName.rows[0].password, async (err, result) => {
-                            if (err) {
-                                console.log(err);
-                            } else {
-                                if(result) {
-                                    current_user = trueName.rows[0];
-                                    if(req.body.company_guess){
-                                        if(req.body.company_guess.toLowerCase() == current_company.name.toLowerCase() || current_company.name.split(" ")[0].toLowerCase() == req.body.company_guess.toLowerCase()) {
-                                            current_score+=1;
-                                        }
-                                        else {
-                                            if(current_score > parseInt(current_user.highscore)){
-                                                await addPoint(current_user.id, current_score);
-                                                await authenticate(current_user.name, current_user.password);
-                                            }
-                                            current_score = 0;
-                                        }
-                                    }
-                                    var randomNumber = Math.trunc(100 * Math.random());
-                                    await getCompany(allCompanies[randomNumber].name);
-                                    while(current_company==undefined){
-                                        randomNumber = Math.trunc(100 * Math.random());
-                                        await getCompany(allCompanies[randomNumber].name);
-                                    }
-                                    res.render("play.ejs", {selectedCompany: current_company, current_user: current_user, score: current_score}); //current_company has {name, ticker, image}, current_user has {id, name, score}
-                                }
-                                else {
-                                    current_error = "Wrong pasword, try again" ;
-                                    res.redirect("/");
-                                }
-                            }
-                        });
+    if(typeof auth === typeof String()) {
+        current_error = auth;
+        res.redirect("/"); //User does not exist
+    }
+    else if(auth) { // authenticated
+        if(req.body.company_guess){
+            if(req.body.company_guess.toLowerCase() == current_company.name.toLowerCase() || current_company.name.split(" ")[0].toLowerCase() == req.body.company_guess.toLowerCase()) {
+                current_score+=1;
+            }
+            else {
+                if(current_score > parseInt(current_user.highscore)){
+                    await addPoint(current_user.id, current_score);
+                    await authenticate(current_user.name, current_user.password);
+                }
+                current_score = 0;
+            }
         }
-        else {
-            current_error = "User not found, try again"; //username was not found
-            res.redirect("/"); //User does not exist
+        var randomNumber = Math.trunc(100 * Math.random());
+        await getCompany(allCompanies[randomNumber].name);
+        while(current_company==undefined){
+            randomNumber = Math.trunc(100 * Math.random());
+            await getCompany(allCompanies[randomNumber].name);
         }
-    } catch (error) {
-        console.log(error);
+        res.render("play.ejs", {selectedCompany: current_company, current_user: current_user, score: current_score}); //current_company has {name, ticker, image}, current_user has {id, name, score}
+    }
+    else { //wrong password
+        current_error = "Wrong pasword, try again" ;
+        res.redirect("/");
     }
 
     
