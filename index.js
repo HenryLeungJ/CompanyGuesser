@@ -147,7 +147,8 @@ app.get("/play", async (req, res) => { //user authenticated = play, not = backl 
         }
         await getScore();
         console.log(req.user);
-        res.render("play.ejs", {selectedCompany: current_company, current_user: req.user, score: current_score}); //current_company has {name, ticker, image}, current_user has {id, name, score}
+        const newScore = await db.query("SELECT * FROM users WHERE id=$1", [req.user.id]);
+        res.render("play.ejs", {selectedCompany: current_company, current_user: newScore.rows[0], score: current_score}); //current_company has {name, ticker, image}, current_user has {id, name, score}
     }
     else {
         res.redirect("/");
