@@ -109,6 +109,7 @@ app.post("/login", (req, res, next) => {
         successRedirect: "/play",
         failureRedirect: "/",
     })(req, res, next);
+    console.log(req.session);
 });
 
 app.get("/signup", (req, res) => {
@@ -205,7 +206,7 @@ passport.use("local", new Strategy(async function verify (username, password, cb
                     
                 }
                 else {
-                    return cb(null, "Wrong pasword, try again"); //wrong password
+                    return cb(null, false, "Wrong Password, Try Again."); //wrong password
                     
                 }
             }
@@ -213,8 +214,7 @@ passport.use("local", new Strategy(async function verify (username, password, cb
         })
     }
     else {
-        return("User Not Found"); //User does not exist
-        res.redirect("/"); //User does not exist
+        return cb(null, false, "Not a User"); //User does not exist
     }
 }))
 
