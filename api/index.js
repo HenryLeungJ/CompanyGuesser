@@ -7,6 +7,9 @@ import bcrypt from 'bcrypt';
 import session from 'express-session';
 import passport from 'passport';
 import { Strategy } from 'passport-local';
+import cors from 'cors';
+
+const __dirname = import.meta.dirname;
 
 dotenv.config();
 
@@ -16,13 +19,17 @@ dotenv.config();
 //logo ninja: https://api-ninjas.com/api/logo
 
 const app = express();
-const port = 3000;
+const port = 3001;
 const saltRounds = 10;
 
 var current_company = {};
 var current_score = 0;
 
 //middlewear 
+
+app.set("views", __dirname + "/views");
+app.set('view engine', 'ejs');
+app.use(cors({origin: ['*'], optionsSuccessStatus: 200}));
 
 app.use(session({
     secret: process.env.SECRET,
@@ -231,3 +238,5 @@ passport.deserializeUser((user, cb) => {
 app.listen(port, () => {
     console.log(`Port ${port} is up and running!`)
 })
+
+export default app;
