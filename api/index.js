@@ -53,7 +53,7 @@ const db = new pg.Client({
     database: process.env.DATABASE_DATABASE,
     password: process.env.DATABASE_PASSWORD,
     port: process.env.DATABASE_PORT,
-    ssl: true,
+    ssl: false,
 })
 
 db.connect();
